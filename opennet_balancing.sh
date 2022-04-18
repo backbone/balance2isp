@@ -34,6 +34,22 @@ ip route flush table $T1
 ip rule del table $T1
 ip route flush cache
 
+# -- mangl MARK ---
+iptables -t mangle -N NEW_OUT_CONN
+iptables -t mangle -A NEW_OUT_CONN -j CONNMARK --set-mark 1
+iptables -t mangle -A NEW_OUT_CONN -m statistic --mode random --probability 0.50 -j RETURN
+iptables -t mangle -A NEW_OUT_CONN -j CONNMARK --set-mark 2
+
+iptables -t mangle -A PREROUTING -d $P0_NET -j RETURN
+
+iptables -t mangle -A PREROUTING -s $P0_NET -m state --state new,related -j NEW_OUT_CONN
+iptables -t mangle -A PREROUTING -s $P0_NET -j CONNMARK --restore-mark
+
+iptables -t mangle -A OUTPUT -d $P0_NET -j RETURN
+
+iptables -t mangle -A OUTPUT -s $P0_NET -m state --state new,related -j NEW_OUT_CONN
+iptables -t mangle -A OUTPUT -s $P0_NET -j CONNMARK --restore-mark
+
 # ---
 ip route add $P1_NET dev $IF1 src $IP1 table T1
 ip route add default via $P1 table T1
@@ -50,8 +66,10 @@ for i in `seq 10`; do
 	ip rule del from $IP2 table T2 2>/dev/null
 done
 
-ip rule add from $IP1 table T1
-ip rule add from $IP2 table T2
+#ip rule add from $IP1 table T1
+#ip rule add from $IP2 table T2
+ip rule add prio 51 fwmark 1 table $T1
+ip rule add prio 51 fwmark 2 table $T2
 
 ip route add $P0_NET     dev $IF0 table T1
 ip route add $P2_NET     dev $IF2 table T1
