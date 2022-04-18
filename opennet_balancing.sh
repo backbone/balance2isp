@@ -5,14 +5,6 @@ iptables -P INPUT ACCEPT
 iptables -P FORWARD ACCEPT
 iptables -P OUTPUT ACCEPT
 
-# -- CLEAR --
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t mangle -F
-iptables -t nat -X
-iptables -t mangle -X
-
 # https://www.opennet.ru/docs/RUS/LARTC/x348.html
 IF1=wan0
 IP1=192.168.2.3
@@ -29,6 +21,20 @@ T2=82
 IF0=docker0
 P0_NET=172.17.0.0/24
 
+# -- CLEAR --
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t mangle -F
+iptables -t nat -X
+iptables -t mangle -X
+ip route flush table $T2
+ip rule del table $T2
+ip route flush table $T1
+ip rule del table $T1
+ip route flush cache
+
+# ---
 ip route add $P1_NET dev $IF1 src $IP1 table T1
 ip route add default via $P1 table T1
 ip route add $P2_NET dev $IF2 src $IP2 table T2
