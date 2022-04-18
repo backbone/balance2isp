@@ -66,11 +66,12 @@ route del default gw $P2 $IF2 2>/dev/null
 route del default gw $P2 $IF2 2>/dev/null
 ip route del default via $P1 dev $IF1 2>/dev/null
 ip route del default via $P2 dev $IF2 2>/dev/null
-#route add default gw $P1 $IF1
-#route add default gw $P2 $IF2
+#route add default gw $P1 metric 100 $IF1
+#route add default gw $P2 metric 100 $IF2
 
-ip route add default scope global nexthop via $P1 dev $IF1 weight 1 \
-nexthop via $P2 dev $IF2 weight 1
+ip route add default scope global \
+	nexthop via $P1 dev $IF1 weight 1 \
+	nexthop via $P2 dev $IF2 weight 1
 
 iptables -t nat -A POSTROUTING -o $IF1 -j MASQUERADE
 iptables -t nat -A POSTROUTING -o $IF2 -j MASQUERADE
