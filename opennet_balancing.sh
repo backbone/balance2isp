@@ -1,33 +1,29 @@
 #!/bin/bash
-
-# -- DEFAULT POLICIES --
-iptables -P INPUT ACCEPT
-iptables -P FORWARD ACCEPT
-iptables -P OUTPUT ACCEPT
-
 # https://www.opennet.ru/docs/RUS/LARTC/x348.html
-IF1=wan0
-IP1=192.168.2.3
-P1_NET=192.168.2/24
-P1=192.168.2.2
+
+IF1=wifi0
+IF2=wifi1
+IF0=docker0
+
+set -v
+set -x
+
+IP0=$(ip -o -4 addr show $IF0 | awk -F'(\\s|/)+' '{print $4}')
+P0_NET=$(echo $IP0 | cut -d. -f1,2,3).0/24
+
+IP1=$(ip -o -4 addr show $IF1 | awk -F'(\\s|/)+' '{print $4}')
+P1_NET=$(echo $IP1 | cut -d. -f1,2,3).0/24
+P1=$(ip route show dev $IF1 | awk '/default/ {print $3}')
+[ -z "$P1" ] && P1=$(ip route ls | grep 'nexthop.*wifi0' | awk '{print $3}')
 T1=81
 
-IF2=wifi0
-IP2=192.168.43.107
-P2_NET=192.168.43.0/24
-P2=192.168.43.1
+IP2=$(ip -o -4 addr show $IF2 | awk -F'(\\s|/)+' '{print $4}')
+P2_NET=$(echo $IP2 | cut -d. -f1,2,3).0/24
+P2=$(ip route show dev $IF2 | awk '/default/ {print $3}')
+[ -z "$P2" ] && P2=$(ip route ls | grep 'nexthop.*wifi1' | awk '{print $3}')
 T2=82
 
-IF0=docker0
-P0_NET=172.17.0.0/24
-
 # -- CLEAR --
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t mangle -F
-iptables -t nat -X
-iptables -t mangle -X
 ip route flush table $T2
 ip rule del table $T2
 ip route flush table $T1
@@ -66,12 +62,7 @@ route del default gw $P2 $IF2 2>/dev/null
 route del default gw $P2 $IF2 2>/dev/null
 ip route del default via $P1 dev $IF1 2>/dev/null
 ip route del default via $P2 dev $IF2 2>/dev/null
-#route add default gw $P1 metric 100 $IF1
-#route add default gw $P2 metric 100 $IF2
 
 ip route add default scope global \
 	nexthop via $P1 dev $IF1 weight 1 \
 	nexthop via $P2 dev $IF2 weight 1
-
-iptables -t nat -A POSTROUTING -o $IF1 -j MASQUERADE
-iptables -t nat -A POSTROUTING -o $IF2 -j MASQUERADE
